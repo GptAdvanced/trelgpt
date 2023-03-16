@@ -1,0 +1,48 @@
+var t = TrelloPowerUp.iframe();
+
+// Create a button in the Trello card
+t.render(() => {
+  t.card('name', 'desc')
+    .then((card) => {
+      t.$('#gpt-button').click(() => {
+        // Fetch the text from the Trello card
+        var text = card.desc;
+
+        // Call the OpenAI API to get the GPT response
+        var requestBody = {
+          model: "davinci",
+          prompt: text,
+          temperature: 0.7,
+          max_tokens: 100
+        };
+
+        var requestOptions = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + openai_key_value,
+          },
+          payload: JSON.stringify(requestBody),
+        };
+
+        var response = UrlFetchApp.fetch("https://api.openai.com/v1/completions", requestOptions);
+        var responseText = response.getContentText();
+        var json = JSON.parse(responseText);
+
+        if (json && json['choices'] && json['choices'][0] && json['choices'][0]['text'] && json['choices'][0]['text'].trim() !== "") {
+          var gresponseText = json['choices'][0]['text'];
+          // Update the Trello card with the GPT response
+          t.card('name', 'desc')
+            .set('desc', gresponseText)
+            .then(() => {
+              t.closePopup();
+            });
+        } else {
+          t.alert({
+            message: 'Could not generate GPT response.',
+            duration: 3
+          });
+        }
+      });
+    });
+});
